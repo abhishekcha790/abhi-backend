@@ -1,25 +1,40 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
-import dotenv from "dotenv";
 
-dotenv.config();
-
+// Cloudinary Configuration
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
   api_secret: process.env.API_SECRET,
 });
 
-const uploadOnCloudinary = async (localFilPath) => {
+const uploadOnCloudinary = async (localFilePath) => {
   try {
-    if (!localFilPath) return null;
-    const response = await cloudinary.uploader.upload(localFilPath, {
+    if (!localFilePath) {
+      console.error("File path is missing");
+      return null;
+    }
+
+    console.log("Uploading file:", localFilePath);
+
+    const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
     });
-    console.log("file is uploaded on cloudinary", response.url);
+
+    console.log("File uploaded successfully:", response.secure_url);
+
+    // Optionally delete the file after successful upload
+    fs.unlinkSync(localFilePath);
+
     return response;
   } catch (error) {
-    fs.unlinkSync(localFilPath);
+    console.error("Cloudinary upload error:", error);
+
+    // Check if file exists before deleting
+    if (fs.existsSync(localFilePath)) {
+      fs.unlinkSync(localFilePath);
+    }
+
     return null;
   }
 };
