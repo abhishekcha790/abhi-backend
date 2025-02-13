@@ -147,7 +147,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
-  const user = await User.findById(req.user?.id);
+  const user = await User.findById(req.user?._id);
   const isPasswordCorrect = user.isPasswordCorrect(oldPassword);
 
   if (!isPasswordCorrect) {
@@ -162,4 +162,36 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     .jason(new ApiResponse(200, {}, "Password Changed Successfully"));
 });
 
-export { registerUser, loginUser, logoutUser, changeCurrentPassword };
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(200, req.user, "Current User fetched successfully");
+});
+
+const getAccountDetailUpdated = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.body;
+
+  if (!(fullName || email)) {
+    throw new ApiError(400, "FullName and email is compulsory to give");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: { fullName, email },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Accounts details updated successfully"));
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  changeCurrentPassword,
+  getCurrentUser,
+};
