@@ -244,6 +244,71 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "CoverImage is  updated successfully"));
 });
 
+const getUserChannel = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username?.trim()) {
+    throw new ApiError(400, "Unable to fetch the username");
+  }
+
+  const channel = await User.aggregate([
+    {
+      $match: { username: username },
+    },
+
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribersTo",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: { $size: "$subscribers" },
+        channelSubscribersToCount: { $size: "$subscribersTo" },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        fullName: 1,
+        username: 1,
+        avatar: 1,
+        coverImage: 1,
+        subscribersCount: 1,
+        channelSubscribersToCount: 1,
+        isSubscribed: 1,
+      },
+    },
+  ]);
+
+  if (!channel.length) {
+    throw new ApiError(400, "Unable to fetch channel");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, channel[0], "Channel info is fetched successfully")
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -253,4 +318,5 @@ export {
   updateUserAvatar,
   getAccountDetailUpdated,
   updateUserCoverImage,
+  getUserChannel,
 };
